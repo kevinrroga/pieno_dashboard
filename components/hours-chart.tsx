@@ -36,7 +36,7 @@ export default function HoursChart({ data }: { data: EmployeeStat[] }) {
         <XAxis dataKey="name" tick={{ fontSize: 12 }} />
         <YAxis tick={{ fontSize: 12 }} unit="h" />
         <Tooltip
-          formatter={(value: number) => [`${value.toFixed(1)}h`, 'Hours']}
+          formatter={(value) => [typeof value === 'number' ? `${value.toFixed(1)}h` : value, 'Hours']}
           cursor={{ fill: '#f3f4f6' }}
         />
         <Bar dataKey="hours" radius={[4, 4, 0, 0]}>

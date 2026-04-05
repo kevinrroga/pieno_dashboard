@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import PdfPrinter from 'pdfmake';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const PdfPrinter = require('pdfmake') as new (fonts: Record<string, unknown>) => { createPdfKitDocument: (def: unknown) => NodeJS.ReadableStream & { end: () => void } };
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 
 const fonts = {

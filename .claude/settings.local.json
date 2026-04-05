@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp -r C:/Users/kevin/Desktop/pieno_app/. C:/Users/kevin/Desktop/pieno_dashboard/)",
+      "Bash(rm -rf C:/Users/kevin/Desktop/pieno_app)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"require\\(''recharts''\\); require\\(''@neondatabase/serverless''\\); require\\(''xlsx''\\); console.log\\(''all deps ok''\\)\")"
+    ]
+  }
+}
