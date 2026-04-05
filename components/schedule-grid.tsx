@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { exportToExcel, exportToPdf } from '@/lib/export';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -404,9 +405,30 @@ export default function ScheduleGrid() {
               localStorage.setItem('schedule-view', next);
               return next;
             })}
-            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors text-gray-600 font-medium"
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 font-medium"
           >
             {view === 'front' ? 'Kitchen (Cooks)' : 'Front (Waiters)'}
+          </button>
+
+          <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+
+          <button
+            onClick={() => {
+              const label = `${weekDays[0].getDate()}-${weekDays[0].getMonth() + 1}_${weekDays[6].getDate()}-${weekDays[6].getMonth() + 1}-${weekDays[6].getFullYear()}`;
+              exportToExcel(visibleEmployees, shifts, weekDays, label);
+            }}
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+          >
+            Export Excel
+          </button>
+          <button
+            onClick={() => {
+              const label = `${weekDays[0].getDate()}-${weekDays[0].getMonth() + 1}_${weekDays[6].getDate()}-${weekDays[6].getMonth() + 1}-${weekDays[6].getFullYear()}`;
+              exportToPdf(visibleEmployees, shifts, weekDays, label);
+            }}
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+          >
+            Export PDF
           </button>
         </div>
       </div>
