@@ -6,11 +6,24 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 const employees = [
-  { id: 1, name: 'Marco Rossi',      role: 'cook' },
-  { id: 2, name: 'Sara Bianchi',     role: 'waiter' },
-  { id: 3, name: 'Luca Ferrari',     role: 'cook' },
-  { id: 4, name: 'Giulia Marino',    role: 'waiter' },
-  { id: 5, name: 'Antonio Esposito', role: 'cook' },
+  { id: 1,  name: 'Marco Rossi',       role: 'cook'   },
+  { id: 2,  name: 'Sara Bianchi',      role: 'waiter' },
+  { id: 3,  name: 'Luca Ferrari',      role: 'cook'   },
+  { id: 4,  name: 'Giulia Marino',     role: 'waiter' },
+  { id: 5,  name: 'Antonio Esposito',  role: 'cook'   },
+  { id: 6,  name: 'Davide Conti',      role: 'cook'   },
+  { id: 7,  name: 'Elena Ricci',       role: 'cook'   },
+  { id: 8,  name: 'Francesco Greco',   role: 'cook'   },
+  { id: 9,  name: 'Valentina Bruno',   role: 'cook'   },
+  { id: 10, name: 'Matteo Lombardi',   role: 'cook'   },
+  { id: 11, name: 'Chiara Moretti',    role: 'waiter' },
+  { id: 12, name: 'Alessandro Gallo',  role: 'waiter' },
+  { id: 13, name: 'Federica Costa',    role: 'waiter' },
+  { id: 14, name: 'Simone Ferrara',    role: 'waiter' },
+  { id: 15, name: 'Martina Leone',     role: 'waiter' },
+  { id: 16, name: 'Roberto Mancini',   role: 'waiter' },
+  { id: 17, name: 'Paola Santoro',     role: 'waiter' },
+  { id: 18, name: 'Gianluca Barbieri', role: 'waiter' },
 ];
 
 type Shift = {
@@ -110,10 +123,11 @@ export default function ScheduleGrid() {
   const [viewingEmployee, setViewingEmployee] = useState<typeof employees[0] | null>(null);
   const [draggedEmployee, setDraggedEmployee] = useState<typeof employees[0] | null>(null);
   const [staffColumnDragOver, setStaffColumnDragOver] = useState(false);
-  // IDs of employees added to the grid (separate from having shifts)
-  const [gridEmployeeIds, setGridEmployeeIds] = useState<number[]>(
-    () => [...new Set(weeklyShifts.map((s) => s.employee_id))]
-  );
+  // Per-week roster: { 'YYYY-MM-DD': [empId, ...] }
+  const [weeklyGridIds, setWeeklyGridIds] = useState<Record<string, number[]>>(() => {
+    const key = toLocalDateStr(getMonday(new Date()));
+    return { [key]: [...new Set(weeklyShifts.map((s) => s.employee_id))] };
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem('schedule-view') as View;
@@ -217,27 +231,40 @@ export default function ScheduleGrid() {
     });
   }
 
+  const monday = getMonday(today);
+  monday.setDate(monday.getDate() + weekOffset * 7);
+  const weekDays = getWeekDays(monday);
+  const weekKey = toLocalDateStr(monday);
+
   const roleFilter = (e: typeof employees[0]) =>
     view === 'kitchen' ? e.role === 'cook' : e.role === 'waiter';
 
-  // Pool: employees of current role not yet in the grid
+  const currentWeekIds: number[] = weeklyGridIds[weekKey] ?? [];
+
+  // Pool: employees of current role not yet in this week's grid
   const poolEmployees = employees.filter(
-    (e) => roleFilter(e) && !gridEmployeeIds.includes(e.id)
+    (e) => roleFilter(e) && !currentWeekIds.includes(e.id)
   );
 
-  // Grid rows: employees explicitly added
+  // Grid rows: employees added to this specific week
   const visibleEmployees = employees.filter(
-    (e) => roleFilter(e) && gridEmployeeIds.includes(e.id)
+    (e) => roleFilter(e) && currentWeekIds.includes(e.id)
   );
 
   function addToGrid(emp: typeof employees[0]) {
-    setGridEmployeeIds((prev) => prev.includes(emp.id) ? prev : [...prev, emp.id]);
+    setWeeklyGridIds((prev) => ({
+      ...prev,
+      [weekKey]: prev[weekKey] ? [...prev[weekKey], emp.id] : [emp.id],
+    }));
     setDraggedEmployee(null);
     setStaffColumnDragOver(false);
   }
 
   function removeFromGrid(empId: number) {
-    setGridEmployeeIds((prev) => prev.filter((id) => id !== empId));
+    setWeeklyGridIds((prev) => ({
+      ...prev,
+      [weekKey]: (prev[weekKey] ?? []).filter((id: number) => id !== empId),
+    }));
     setShifts((prev) => prev.filter((s) => s.employee_id !== empId));
   }
 
@@ -249,10 +276,6 @@ export default function ScheduleGrid() {
     setWeekOffset((o) => o + (e.deltaX > 0 ? 1 : -1));
     setTimeout(() => { swipeLocked.current = false; }, 600);
   }
-
-  const monday = getMonday(today);
-  monday.setDate(monday.getDate() + weekOffset * 7);
-  const weekDays = getWeekDays(monday);
 
   const todayStr = toLocalDateStr(today);
   const isCurrentWeek = weekOffset === 0;
@@ -399,7 +422,7 @@ export default function ScheduleGrid() {
               key={emp.id}
               draggable
               onDragStart={() => setDraggedEmployee(emp)}
-              onDragEnd={() => { setDraggedEmployee(null); setDropTarget(null); }}
+              onDragEnd={() => { setDraggedEmployee(null); setStaffColumnDragOver(false); }}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-grab active:cursor-grabbing select-none transition-opacity ${
                 draggedEmployee?.id === emp.id ? 'opacity-40' : 'opacity-100'
               } ${
