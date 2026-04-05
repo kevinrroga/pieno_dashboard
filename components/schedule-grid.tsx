@@ -167,6 +167,71 @@ export default function ScheduleGrid() {
   const [addingEmployee, setAddingEmployee] = useState(false);
   const [newEmployeeName, setNewEmployeeName] = useState('');
   const [staffColumnDragOver, setStaffColumnDragOver] = useState(false);
+
+  // Touch drag state
+  const touchDragEmployee = useRef<Employee | null>(null);
+  const touchGhost = useRef<HTMLDivElement | null>(null);
+  const staffColumnRef = useRef<HTMLTableCellElement>(null);
+
+  function createGhost(emp: Employee, x: number, y: number) {
+    const ghost = document.createElement('div');
+    ghost.textContent = emp.name;
+    ghost.style.cssText = `
+      position: fixed; z-index: 9999; pointer-events: none;
+      padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      background: ${emp.role === 'cook' ? '#eff6ff' : '#ecfeff'};
+      color: ${emp.role === 'cook' ? '#1e40af' : '#155e75'};
+      border: 1px solid ${emp.role === 'cook' ? '#bfdbfe' : '#a5f3fc'};
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transform: translate(-50%, -50%);
+      left: ${x}px; top: ${y}px;
+    `;
+    document.body.appendChild(ghost);
+    touchGhost.current = ghost;
+  }
+
+  function removeGhost() {
+    if (touchGhost.current) {
+      document.body.removeChild(touchGhost.current);
+      touchGhost.current = null;
+    }
+  }
+
+  function handleTouchStart(emp: Employee, e: React.TouchEvent) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    touchDragEmployee.current = emp;
+    setDraggedEmployee(emp);
+    createGhost(emp, touch.clientX, touch.clientY);
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!touchDragEmployee.current) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (touchGhost.current) {
+      touchGhost.current.style.left = `${touch.clientX}px`;
+      touchGhost.current.style.top = `${touch.clientY}px`;
+    }
+    // Check if over staff column
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const isOverStaff = staffColumnRef.current?.contains(el) || el === staffColumnRef.current;
+    setStaffColumnDragOver(!!isOverStaff);
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (!touchDragEmployee.current) return;
+    const touch = e.changedTouches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const isOverStaff = staffColumnRef.current?.contains(el) || el === staffColumnRef.current;
+    if (isOverStaff) {
+      addToGrid(touchDragEmployee.current);
+    }
+    touchDragEmployee.current = null;
+    setDraggedEmployee(null);
+    setStaffColumnDragOver(false);
+    removeGhost();
+  }
   // Per-week roster: { 'YYYY-MM-DD': [empId, ...] }
   const [weeklyGridIds, setWeeklyGridIds] = useState<Record<string, number[]>>(() => {
     const key = toLocalDateStr(getMonday(new Date()));
@@ -383,7 +448,7 @@ export default function ScheduleGrid() {
   return (
     <div className="space-y-4">
       {/* Week navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setWeekOffset((o) => o - 1)}
@@ -483,7 +548,7 @@ export default function ScheduleGrid() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!isCurrentWeek && (
             <button
               onClick={() => setWeekOffset(0)}
@@ -540,7 +605,8 @@ export default function ScheduleGrid() {
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-            Available Staff — drag to schedule
+            <span className="hidden md:inline">Available Staff — drag to schedule</span>
+            <span className="md:hidden">Available Staff — drag onto Staff column</span>
           </p>
           <button
             onClick={() => { setAddingEmployee(true); setNewEmployeeName(''); }}
@@ -556,7 +622,10 @@ export default function ScheduleGrid() {
               draggable
               onDragStart={() => setDraggedEmployee(emp)}
               onDragEnd={() => { setDraggedEmployee(null); setStaffColumnDragOver(false); }}
-              className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-grab active:cursor-grabbing select-none transition-opacity ${
+              onTouchStart={(e) => handleTouchStart(emp, e)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-grab active:cursor-grabbing select-none transition-opacity touch-none ${
                 draggedEmployee?.id === emp.id ? 'opacity-40' : 'opacity-100'
               } ${
                 emp.role === 'cook'
@@ -590,6 +659,7 @@ export default function ScheduleGrid() {
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
               <th
+                ref={staffColumnRef}
                 onDragOver={(e) => { if (draggedEmployee) { e.preventDefault(); setStaffColumnDragOver(true); } }}
                 onDragLeave={() => setStaffColumnDragOver(false)}
                 onDrop={(e) => { e.preventDefault(); if (draggedEmployee) addToGrid(draggedEmployee); }}
@@ -738,7 +808,7 @@ export default function ScheduleGrid() {
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setViewingEmployee(null)}>
             <div
-              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-6 w-80 space-y-4"
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div>
@@ -807,7 +877,7 @@ export default function ScheduleGrid() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setEditing(null)}>
           <div
-            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-6 w-80 space-y-5"
+            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div>
@@ -889,7 +959,7 @@ export default function ScheduleGrid() {
       {addingEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setAddingEmployee(false)}>
           <div
-            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-6 w-80 space-y-4"
+            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div>

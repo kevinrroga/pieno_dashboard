@@ -13,8 +13,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Weekly Schedule</h1>
-        <p className="text-sm text-gray-500 mt-1">{fmtDate(today)}</p>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">Weekly Schedule</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{fmtDate(today)}</p>
       </div>
       <ErrorBoundary>
         <ScheduleGrid />
