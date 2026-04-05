@@ -109,7 +109,11 @@ export default function ScheduleGrid() {
   const [editing, setEditing] = useState<EditingShift | null>(null);
   const [viewingEmployee, setViewingEmployee] = useState<typeof employees[0] | null>(null);
   const [draggedEmployee, setDraggedEmployee] = useState<typeof employees[0] | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ empId: number; dayIndex: number } | null>(null);
+  const [staffColumnDragOver, setStaffColumnDragOver] = useState(false);
+  // IDs of employees added to the grid (separate from having shifts)
+  const [gridEmployeeIds, setGridEmployeeIds] = useState<number[]>(
+    () => [...new Set(weeklyShifts.map((s) => s.employee_id))]
+  );
 
   useEffect(() => {
     const stored = localStorage.getItem('schedule-view') as View;
@@ -216,22 +220,25 @@ export default function ScheduleGrid() {
   const roleFilter = (e: typeof employees[0]) =>
     view === 'kitchen' ? e.role === 'cook' : e.role === 'waiter';
 
-  // Pool: all employees of the current role view
-  const poolEmployees = employees.filter(roleFilter);
+  // Pool: employees of current role not yet in the grid
+  const poolEmployees = employees.filter(
+    (e) => roleFilter(e) && !gridEmployeeIds.includes(e.id)
+  );
 
-  // Grid: only employees with at least one shift
-  const scheduledIds = new Set(shifts.map((s) => s.employee_id));
-  const visibleEmployees = employees.filter((e) => roleFilter(e) && scheduledIds.has(e.id));
+  // Grid rows: employees explicitly added
+  const visibleEmployees = employees.filter(
+    (e) => roleFilter(e) && gridEmployeeIds.includes(e.id)
+  );
 
-  function handleDrop(dayIndex: number, emp: typeof employees[0]) {
-    const existing = shiftMap[emp.id]?.[dayIndex];
-    if (existing) {
-      openEditor(emp, dayIndex, existing);
-    } else {
-      openAdder(emp, dayIndex);
-    }
+  function addToGrid(emp: typeof employees[0]) {
+    setGridEmployeeIds((prev) => prev.includes(emp.id) ? prev : [...prev, emp.id]);
     setDraggedEmployee(null);
-    setDropTarget(null);
+    setStaffColumnDragOver(false);
+  }
+
+  function removeFromGrid(empId: number) {
+    setGridEmployeeIds((prev) => prev.filter((id) => id !== empId));
+    setShifts((prev) => prev.filter((s) => s.employee_id !== empId));
   }
 
   function handleWheel(e: React.WheelEvent) {
@@ -416,8 +423,17 @@ export default function ScheduleGrid() {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="text-left px-5 py-3 font-semibold text-gray-700 dark:text-gray-300 w-48 bg-gray-50 dark:bg-gray-800">
-                Staff
+              <th
+                onDragOver={(e) => { if (draggedEmployee) { e.preventDefault(); setStaffColumnDragOver(true); } }}
+                onDragLeave={() => setStaffColumnDragOver(false)}
+                onDrop={(e) => { e.preventDefault(); if (draggedEmployee) addToGrid(draggedEmployee); }}
+                className={`text-left px-5 py-3 font-semibold w-48 transition-colors ${
+                  staffColumnDragOver
+                    ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-2 border-dashed border-green-300 dark:border-green-700'
+                    : 'text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800'
+                }`}
+              >
+                {staffColumnDragOver ? 'Drop to add' : 'Staff'}
               </th>
               {weekDays.map((d, i) => {
                 const dateStr = toLocalDateStr(d);
@@ -425,13 +441,8 @@ export default function ScheduleGrid() {
                 return (
                   <th
                     key={i}
-                    onDragOver={(e) => { if (draggedEmployee) { e.preventDefault(); setDropTarget({ empId: draggedEmployee.id, dayIndex: i }); } }}
-                    onDragLeave={() => setDropTarget(null)}
-                    onDrop={(e) => { e.preventDefault(); if (draggedEmployee) handleDrop(i, draggedEmployee); }}
-                    className={`px-3 py-3 text-center font-semibold min-w-[110px] transition-colors ${
-                      draggedEmployee && dropTarget?.empId === draggedEmployee.id && dropTarget?.dayIndex === i
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                        : isToday ? 'bg-gray-900 text-white' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                    className={`px-3 py-3 text-center font-semibold min-w-[110px] ${
+                      isToday ? 'bg-gray-900 text-white' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                     }`}
                   >
                     <div>{DAYS[i]}</div>
@@ -447,13 +458,22 @@ export default function ScheduleGrid() {
             {visibleEmployees.map((emp, rowIndex) => (
               <tr key={emp.id} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/50 dark:bg-gray-800/50'}>
                 <td className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
-                  <button
-                    onClick={() => setViewingEmployee(emp)}
-                    className="text-left hover:underline underline-offset-2"
-                  >
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{emp.name}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 capitalize mt-0.5">{emp.role}</p>
-                  </button>
+                  <div className="flex items-center justify-between group">
+                    <button
+                      onClick={() => setViewingEmployee(emp)}
+                      className="text-left hover:underline underline-offset-2"
+                    >
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{emp.name}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 capitalize mt-0.5">{emp.role}</p>
+                    </button>
+                    <button
+                      onClick={() => removeFromGrid(emp.id)}
+                      title="Remove from schedule"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 dark:text-gray-600 hover:text-red-400 dark:hover:text-red-500 text-lg leading-none pl-2"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </td>
                 {weekDays.map((d, i) => {
                   const dateStr = toLocalDateStr(d);
@@ -462,15 +482,8 @@ export default function ScheduleGrid() {
                   return (
                     <td
                       key={i}
-                      onDragOver={(e) => { if (draggedEmployee) { e.preventDefault(); setDropTarget({ empId: emp.id, dayIndex: i }); } }}
-                      onDragLeave={() => setDropTarget(null)}
-                      onDrop={(e) => { e.preventDefault(); if (draggedEmployee) handleDrop(i, draggedEmployee); }}
-                      className={`px-3 py-3 text-center border-b border-gray-100 dark:border-gray-800 transition-colors ${
+                      className={`px-3 py-3 text-center border-b border-gray-100 dark:border-gray-800 ${
                         isToday ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
-                      } ${
-                        draggedEmployee && dropTarget?.empId === emp.id && dropTarget?.dayIndex === i
-                          ? 'bg-green-50 dark:bg-green-900/20 ring-2 ring-inset ring-green-300 dark:ring-green-700'
-                          : ''
                       }`}
                     >
                       {shift ? (
