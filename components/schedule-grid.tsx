@@ -4,6 +4,32 @@ import { useState, useRef, useEffect } from 'react';
 import { exportToExcel, exportToPdf } from '@/lib/export';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const MINUTES = ['00', '15', '30', '45'];
+
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [h, m] = value ? value.split(':') : ['08', '00'];
+  const selectClass = "text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 w-full";
+  return (
+    <div className="flex gap-1 items-center">
+      <select
+        value={h}
+        onChange={(e) => onChange(`${e.target.value}:${m}`)}
+        className={selectClass}
+      >
+        {HOURS.map((hour) => <option key={hour} value={hour}>{hour}</option>)}
+      </select>
+      <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
+      <select
+        value={MINUTES.includes(m) ? m : '00'}
+        onChange={(e) => onChange(`${h}:${e.target.value}`)}
+        className={selectClass}
+      >
+        {MINUTES.map((min) => <option key={min} value={min}>{min}</option>)}
+      </select>
+    </div>
+  );
+}
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 const employees = [
@@ -29,6 +55,7 @@ const employees = [
 
 type Shift = {
   employee_id: number;
+  weekKey: string;
   dayIndex: number;
   start: string;
   end: string;
@@ -36,22 +63,33 @@ type Shift = {
   breakEnd?: string;
 };
 
+function getCurrentWeekKey(): string {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const THIS_WEEK = getCurrentWeekKey();
+
 const weeklyShifts: Shift[] = [
-  { employee_id: 1, dayIndex: 0, start: '08:00', end: '16:00', breakStart: '12:00', breakEnd: '12:30' },
-  { employee_id: 1, dayIndex: 1, start: '08:00', end: '16:00', breakStart: '12:00', breakEnd: '12:30' },
-  { employee_id: 1, dayIndex: 3, start: '10:00', end: '18:00', breakStart: '14:00', breakEnd: '14:30' },
-  { employee_id: 1, dayIndex: 4, start: '08:00', end: '16:00', breakStart: '12:00', breakEnd: '12:30' },
-  { employee_id: 2, dayIndex: 0, start: '10:00', end: '18:00', breakStart: '14:00', breakEnd: '15:00' },
-  { employee_id: 2, dayIndex: 2, start: '12:00', end: '20:00', breakStart: '16:00', breakEnd: '16:30' },
-  { employee_id: 2, dayIndex: 4, start: '10:00', end: '18:00', breakStart: '14:00', breakEnd: '15:00' },
-  { employee_id: 3, dayIndex: 1, start: '08:00', end: '16:00', breakStart: '12:00', breakEnd: '12:30' },
-  { employee_id: 3, dayIndex: 5, start: '09:00', end: '17:00', breakStart: '13:00', breakEnd: '13:30' },
-  { employee_id: 4, dayIndex: 0, start: '12:00', end: '20:00', breakStart: '16:00', breakEnd: '17:00' },
-  { employee_id: 4, dayIndex: 2, start: '12:00', end: '20:00', breakStart: '16:00', breakEnd: '17:00' },
-  { employee_id: 4, dayIndex: 4, start: '12:00', end: '20:00', breakStart: '16:00', breakEnd: '17:00' },
-  { employee_id: 4, dayIndex: 6, start: '11:00', end: '19:00', breakStart: '15:00', breakEnd: '15:30' },
-  { employee_id: 5, dayIndex: 3, start: '08:00', end: '14:00' },
-  { employee_id: 5, dayIndex: 6, start: '09:00', end: '15:00', breakStart: '12:00', breakEnd: '12:30' },
+  { weekKey: THIS_WEEK, employee_id: 1, dayIndex: 0, start: '08:00', end: '16:00', breakStart: '12:00', breakEnd: '12:30' },
+  { weekKey: THIS_WEEK, employee_id: 1, dayIndex: 1, start: '08:00', end: '16:00', breakStart: '12:00', breakEnd: '12:30' },
+  { weekKey: THIS_WEEK, employee_id: 1, dayIndex: 3, start: '10:00', end: '18:00', breakStart: '14:00', breakEnd: '14:30' },
+  { weekKey: THIS_WEEK, employee_id: 1, dayIndex: 4, start: '08:00', end: '16:00', breakStart: '12:00', breakEnd: '12:30' },
+  { weekKey: THIS_WEEK, employee_id: 2, dayIndex: 0, start: '10:00', end: '18:00', breakStart: '14:00', breakEnd: '15:00' },
+  { weekKey: THIS_WEEK, employee_id: 2, dayIndex: 2, start: '12:00', end: '20:00', breakStart: '16:00', breakEnd: '16:30' },
+  { weekKey: THIS_WEEK, employee_id: 2, dayIndex: 4, start: '10:00', end: '18:00', breakStart: '14:00', breakEnd: '15:00' },
+  { weekKey: THIS_WEEK, employee_id: 3, dayIndex: 1, start: '08:00', end: '16:00', breakStart: '12:00', breakEnd: '12:30' },
+  { weekKey: THIS_WEEK, employee_id: 3, dayIndex: 5, start: '09:00', end: '17:00', breakStart: '13:00', breakEnd: '13:30' },
+  { weekKey: THIS_WEEK, employee_id: 4, dayIndex: 0, start: '12:00', end: '20:00', breakStart: '16:00', breakEnd: '17:00' },
+  { weekKey: THIS_WEEK, employee_id: 4, dayIndex: 2, start: '12:00', end: '20:00', breakStart: '16:00', breakEnd: '17:00' },
+  { weekKey: THIS_WEEK, employee_id: 4, dayIndex: 4, start: '12:00', end: '20:00', breakStart: '16:00', breakEnd: '17:00' },
+  { weekKey: THIS_WEEK, employee_id: 4, dayIndex: 6, start: '11:00', end: '19:00', breakStart: '15:00', breakEnd: '15:30' },
+  { weekKey: THIS_WEEK, employee_id: 5, dayIndex: 3, start: '08:00', end: '14:00' },
+  { weekKey: THIS_WEEK, employee_id: 5, dayIndex: 6, start: '09:00', end: '15:00', breakStart: '12:00', breakEnd: '12:30' },
 ];
 
 function getMonday(date: Date) {
@@ -175,11 +213,6 @@ export default function ScheduleGrid() {
     setCalendarOpen(false);
   }
 
-  const shiftMap: Record<number, Record<number, Shift>> = {};
-  for (const s of shifts) {
-    if (!shiftMap[s.employee_id]) shiftMap[s.employee_id] = {};
-    shiftMap[s.employee_id][s.dayIndex] = s;
-  }
 
   function openEditor(emp: Employee, dayIndex: number, shift: Shift) {
     setEditing({
@@ -197,11 +230,11 @@ export default function ScheduleGrid() {
   function saveShift() {
     if (!editing) return;
     const exists = shifts.some(
-      (s) => s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex
+      (s) => s.weekKey === weekKey && s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex
     );
     if (exists) {
       setShifts((prev) => prev.map((s) =>
-        s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex
+        s.weekKey === weekKey && s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex
           ? {
               ...s,
               start: editing.start,
@@ -213,6 +246,7 @@ export default function ScheduleGrid() {
       ));
     } else {
       setShifts((prev) => [...prev, {
+        weekKey,
         employee_id: editing.employee_id,
         dayIndex: editing.dayIndex,
         start: editing.start,
@@ -241,6 +275,12 @@ export default function ScheduleGrid() {
   monday.setDate(monday.getDate() + weekOffset * 7);
   const weekDays = getWeekDays(monday);
   const weekKey = toLocalDateStr(monday);
+
+  const shiftMap: Record<number, Record<number, Shift>> = {};
+  for (const s of shifts.filter((s) => s.weekKey === weekKey)) {
+    if (!shiftMap[s.employee_id]) shiftMap[s.employee_id] = {};
+    shiftMap[s.employee_id][s.dayIndex] = s;
+  }
 
   const roleFilter = (e: Employee) =>
     view === 'kitchen' ? e.role === 'cook' : e.role === 'waiter';
@@ -282,6 +322,44 @@ export default function ScheduleGrid() {
       [weekKey]: (prev[weekKey] ?? []).filter((id: number) => id !== empId),
     }));
     setShifts((prev) => prev.filter((s) => s.employee_id !== empId));
+  }
+
+  function removeEmployeePermanently(empId: number) {
+    setAllEmployees((prev) => prev.filter((e) => e.id !== empId));
+    setWeeklyGridIds((prev) => {
+      const next = { ...prev };
+      for (const key in next) next[key] = next[key].filter((id: number) => id !== empId);
+      return next;
+    });
+    setShifts((prev) => prev.filter((s) => s.employee_id !== empId));
+    setViewingEmployee(null);
+  }
+
+  function duplicateLastWeek() {
+    const prevMonday = new Date(monday);
+    prevMonday.setDate(prevMonday.getDate() - 7);
+    const prevWeekKey = toLocalDateStr(prevMonday);
+
+    const prevShifts = shifts.filter((s) => s.weekKey === prevWeekKey);
+    if (prevShifts.length === 0) {
+      alert('No shifts found in the previous week to copy.');
+      return;
+    }
+
+    const thisWeekShifts = shifts.filter((s) => s.weekKey === weekKey);
+    if (thisWeekShifts.length > 0) {
+      if (!confirm('This week already has shifts. Overwrite with last week\'s schedule?')) return;
+      setShifts((prev) => prev.filter((s) => s.weekKey !== weekKey));
+    }
+
+    const copied = prevShifts.map((s) => ({ ...s, weekKey }));
+    setShifts((prev) => [...prev.filter((s) => s.weekKey !== weekKey), ...copied]);
+
+    // Also copy the staff roster from last week
+    const prevRoster = weeklyGridIds[prevWeekKey] ?? [];
+    if (prevRoster.length > 0) {
+      setWeeklyGridIds((prev) => ({ ...prev, [weekKey]: [...prevRoster] }));
+    }
   }
 
   function handleWheel(e: React.WheelEvent) {
@@ -428,6 +506,16 @@ export default function ScheduleGrid() {
           <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
 
           <button
+            onClick={duplicateLastWeek}
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+            title="Copy last week's shifts into this week"
+          >
+            Copy last week
+          </button>
+
+          <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+
+          <button
             onClick={() => {
               const label = `${weekDays[0].getDate()}-${weekDays[0].getMonth() + 1}_${weekDays[6].getDate()}-${weekDays[6].getMonth() + 1}-${weekDays[6].getFullYear()}`;
               exportToExcel(visibleEmployees, shifts, weekDays, label);
@@ -468,7 +556,7 @@ export default function ScheduleGrid() {
               draggable
               onDragStart={() => setDraggedEmployee(emp)}
               onDragEnd={() => { setDraggedEmployee(null); setStaffColumnDragOver(false); }}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-grab active:cursor-grabbing select-none transition-opacity ${
+              className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-grab active:cursor-grabbing select-none transition-opacity ${
                 draggedEmployee?.id === emp.id ? 'opacity-40' : 'opacity-100'
               } ${
                 emp.role === 'cook'
@@ -478,6 +566,16 @@ export default function ScheduleGrid() {
             >
               <span className="text-xs">{emp.role === 'cook' ? '👨‍🍳' : '🍽️'}</span>
               {emp.name}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Remove ${emp.name} permanently?`)) removeEmployeePermanently(emp.id);
+                }}
+                className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-current hover:text-red-500 leading-none"
+                title="Remove permanently"
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
@@ -513,13 +611,19 @@ export default function ScheduleGrid() {
                       isToday ? 'bg-gray-900 text-white' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                     }`}
                   >
-                    <div>{DAYS[i]}</div>
-                    <div className={`text-xs font-normal mt-0.5 ${isToday ? 'text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
-                      {d.getDate()}/{d.getMonth() + 1}
+                    <div className="text-xs font-medium tracking-wide">{DAYS[i]}</div>
+                    <div className={`text-base font-bold mt-0.5 ${isToday ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>
+                      {d.getDate()}
+                    </div>
+                    <div className={`text-xs font-normal ${isToday ? 'text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
+                      {d.toLocaleDateString('en-GB', { month: 'short' })}
                     </div>
                   </th>
                 );
               })}
+              <th className="px-3 py-3 text-center font-semibold min-w-[80px] bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                Total
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -583,11 +687,31 @@ export default function ScheduleGrid() {
                     </td>
                   );
                 })}
+                <td className="px-3 py-3 text-center border-b border-gray-100 dark:border-gray-800">
+                  {(() => {
+                    const totalMins = shifts
+                      .filter((s) => s.weekKey === weekKey && s.employee_id === emp.id)
+                      .reduce((acc, s) => {
+                        const gross = timeToMinutes(s.end) - timeToMinutes(s.start);
+                        const brk = s.breakStart && s.breakEnd
+                          ? timeToMinutes(s.breakEnd) - timeToMinutes(s.breakStart)
+                          : 0;
+                        return acc + gross - brk;
+                      }, 0);
+                    return totalMins > 0 ? (
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        {formatHours(totalMins)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-200 dark:text-gray-700">—</span>
+                    );
+                  })()}
+                </td>
               </tr>
             ))}
             {visibleEmployees.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                <td colSpan={9} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                   No staff scheduled — drag someone from the pool above
                 </td>
               </tr>
@@ -598,8 +722,8 @@ export default function ScheduleGrid() {
 
       {/* Employee weekly summary modal */}
       {viewingEmployee && (() => {
-        const empShifts = (isCurrentWeek ? shifts : [])
-          .filter((s) => s.employee_id === viewingEmployee.id)
+        const empShifts = shifts
+          .filter((s) => s.weekKey === weekKey && s.employee_id === viewingEmployee.id)
           .map((s) => {
             const shiftMins = timeToMinutes(s.end) - timeToMinutes(s.start);
             const breakMins = s.breakStart && s.breakEnd
@@ -658,12 +782,22 @@ export default function ScheduleGrid() {
                 </div>
               )}
 
-              <button
-                onClick={() => setViewingEmployee(null)}
-                className="w-full px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Close
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setViewingEmployee(null)}
+                  className="flex-1 px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Remove ${viewingEmployee.name} permanently?`)) removeEmployeePermanently(viewingEmployee.id);
+                  }}
+                  className="flex-1 px-4 py-2 text-sm rounded-lg border border-red-200 dark:border-red-900 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -679,7 +813,7 @@ export default function ScheduleGrid() {
             <div>
               <p className="font-semibold text-gray-900 dark:text-gray-100">{editing.employeeName}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {editing.dayLabel} — {shifts.some(s => s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex) ? 'Edit shift' : 'Add shift'}
+                {editing.dayLabel} — {shifts.some(s => s.weekKey === weekKey && s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex) ? 'Edit shift' : 'Add shift'}
               </p>
             </div>
 
@@ -688,21 +822,11 @@ export default function ScheduleGrid() {
               <div className="flex items-center gap-3">
                 <div className="flex-1 space-y-1">
                   <label className="text-xs text-gray-500 dark:text-gray-400">Start</label>
-                  <input
-                    type="time"
-                    value={editing.start}
-                    onChange={(e) => setEditing({ ...editing, start: e.target.value })}
-                    className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
-                  />
+                  <TimeSelect value={editing.start} onChange={(v) => setEditing({ ...editing, start: v })} />
                 </div>
                 <div className="flex-1 space-y-1">
                   <label className="text-xs text-gray-500 dark:text-gray-400">End</label>
-                  <input
-                    type="time"
-                    value={editing.end}
-                    onChange={(e) => setEditing({ ...editing, end: e.target.value })}
-                    className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
-                  />
+                  <TimeSelect value={editing.end} onChange={(v) => setEditing({ ...editing, end: v })} />
                 </div>
               </div>
             </div>
@@ -712,21 +836,11 @@ export default function ScheduleGrid() {
               <div className="flex items-center gap-3">
                 <div className="flex-1 space-y-1">
                   <label className="text-xs text-gray-500 dark:text-gray-400">Start</label>
-                  <input
-                    type="time"
-                    value={editing.breakStart}
-                    onChange={(e) => setEditing({ ...editing, breakStart: e.target.value })}
-                    className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
-                  />
+                  <TimeSelect value={editing.breakStart || '12:00'} onChange={(v) => setEditing({ ...editing, breakStart: v })} />
                 </div>
                 <div className="flex-1 space-y-1">
                   <label className="text-xs text-gray-500 dark:text-gray-400">End</label>
-                  <input
-                    type="time"
-                    value={editing.breakEnd}
-                    onChange={(e) => setEditing({ ...editing, breakEnd: e.target.value })}
-                    className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
-                  />
+                  <TimeSelect value={editing.breakEnd || '12:00'} onChange={(v) => setEditing({ ...editing, breakEnd: v })} />
                 </div>
               </div>
               {(editing.breakStart || editing.breakEnd) && (
@@ -739,11 +853,11 @@ export default function ScheduleGrid() {
               )}
             </div>
 
-            {shifts.some(s => s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex) && (
+            {shifts.some(s => s.weekKey === weekKey && s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex) && (
               <button
                 onClick={() => {
                   setShifts((prev) => prev.filter(
-                    (s) => !(s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex)
+                    (s) => !(s.weekKey === weekKey && s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex)
                   ));
                   setEditing(null);
                 }}

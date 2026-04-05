@@ -1,4 +1,5 @@
 import ScheduleGrid from '@/components/schedule-grid';
+import ErrorBoundary from '@/components/error-boundary';
 
 function fmtDate(date: Date) {
   return date.toLocaleDateString('en-GB', {
@@ -15,7 +16,9 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-gray-900">Weekly Schedule</h1>
         <p className="text-sm text-gray-500 mt-1">{fmtDate(today)}</p>
       </div>
-      <ScheduleGrid />
+      <ErrorBoundary>
+        <ScheduleGrid />
+      </ErrorBoundary>
     </div>
   );
 }
