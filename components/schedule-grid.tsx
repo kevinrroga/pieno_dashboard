@@ -7,24 +7,24 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 const employees = [
-  { id: 1,  name: 'Marco Rossi',       role: 'cook'   },
-  { id: 2,  name: 'Sara Bianchi',      role: 'waiter' },
-  { id: 3,  name: 'Luca Ferrari',      role: 'cook'   },
-  { id: 4,  name: 'Giulia Marino',     role: 'waiter' },
-  { id: 5,  name: 'Antonio Esposito',  role: 'cook'   },
-  { id: 6,  name: 'Davide Conti',      role: 'cook'   },
-  { id: 7,  name: 'Elena Ricci',       role: 'cook'   },
-  { id: 8,  name: 'Francesco Greco',   role: 'cook'   },
-  { id: 9,  name: 'Valentina Bruno',   role: 'cook'   },
-  { id: 10, name: 'Matteo Lombardi',   role: 'cook'   },
-  { id: 11, name: 'Chiara Moretti',    role: 'waiter' },
-  { id: 12, name: 'Alessandro Gallo',  role: 'waiter' },
-  { id: 13, name: 'Federica Costa',    role: 'waiter' },
-  { id: 14, name: 'Simone Ferrara',    role: 'waiter' },
-  { id: 15, name: 'Martina Leone',     role: 'waiter' },
-  { id: 16, name: 'Roberto Mancini',   role: 'waiter' },
-  { id: 17, name: 'Paola Santoro',     role: 'waiter' },
-  { id: 18, name: 'Gianluca Barbieri', role: 'waiter' },
+  { id: 1,  name: 'Daniel',       role: 'waiter'   },
+  { id: 2,  name: 'Coli',      role: 'waiter' },
+  { id: 3,  name: 'Toni',      role: 'waiter'   },
+  { id: 4,  name: 'Dita',     role: 'waiter' },
+  { id: 5,  name: 'Kevin',  role: 'waiter'   },
+  { id: 6,  name: 'Bianca',      role: 'waiter'   },
+  { id: 7,  name: 'AJ',       role: 'waiter'   },
+  { id: 8,  name: 'Ben',   role: 'waiter'   },
+  { id: 9,  name: 'Chris',   role: 'waiter'   },
+  { id: 10, name: 'Mia',   role: 'waiter'   },
+  { id: 11, name: 'Ross',    role: 'waiter' },
+  { id: 12, name: 'Rubin',  role: 'waiter' },
+  { id: 13, name: 'Henri',    role: 'waiter' },
+  { id: 14, name: 'Ionel',    role: 'cook' },
+  { id: 15, name: 'Costa',     role: 'cook' },
+  { id: 16, name: 'Osman',   role: 'cook' },
+  { id: 17, name: 'Reshat',     role: 'cook' },
+  { id: 18, name: 'Ilyas', role: 'cook' },
 ];
 
 type Shift = {
@@ -115,14 +115,19 @@ type EditingShift = {
   breakEnd: string;
 };
 
+type Employee = { id: number; name: string; role: string };
+
 export default function ScheduleGrid() {
   const today = new Date();
+  const [allEmployees, setAllEmployees] = useState<Employee[]>(employees);
   const [shifts, setShifts] = useState<Shift[]>(weeklyShifts);
   const [weekOffset, setWeekOffset] = useState(0);
   const [view, setView] = useState<View>('front');
   const [editing, setEditing] = useState<EditingShift | null>(null);
-  const [viewingEmployee, setViewingEmployee] = useState<typeof employees[0] | null>(null);
-  const [draggedEmployee, setDraggedEmployee] = useState<typeof employees[0] | null>(null);
+  const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
+  const [draggedEmployee, setDraggedEmployee] = useState<Employee | null>(null);
+  const [addingEmployee, setAddingEmployee] = useState(false);
+  const [newEmployeeName, setNewEmployeeName] = useState('');
   const [staffColumnDragOver, setStaffColumnDragOver] = useState(false);
   // Per-week roster: { 'YYYY-MM-DD': [empId, ...] }
   const [weeklyGridIds, setWeeklyGridIds] = useState<Record<string, number[]>>(() => {
@@ -176,7 +181,7 @@ export default function ScheduleGrid() {
     shiftMap[s.employee_id][s.dayIndex] = s;
   }
 
-  function openEditor(emp: typeof employees[0], dayIndex: number, shift: Shift) {
+  function openEditor(emp: Employee, dayIndex: number, shift: Shift) {
     setEditing({
       employee_id: emp.id,
       dayIndex,
@@ -219,7 +224,7 @@ export default function ScheduleGrid() {
     setEditing(null);
   }
 
-  function openAdder(emp: typeof employees[0], dayIndex: number) {
+  function openAdder(emp: Employee, dayIndex: number) {
     setEditing({
       employee_id: emp.id,
       dayIndex,
@@ -237,22 +242,32 @@ export default function ScheduleGrid() {
   const weekDays = getWeekDays(monday);
   const weekKey = toLocalDateStr(monday);
 
-  const roleFilter = (e: typeof employees[0]) =>
+  const roleFilter = (e: Employee) =>
     view === 'kitchen' ? e.role === 'cook' : e.role === 'waiter';
 
   const currentWeekIds: number[] = weeklyGridIds[weekKey] ?? [];
 
   // Pool: employees of current role not yet in this week's grid
-  const poolEmployees = employees.filter(
+  const poolEmployees = allEmployees.filter(
     (e) => roleFilter(e) && !currentWeekIds.includes(e.id)
   );
 
   // Grid rows: employees added to this specific week
-  const visibleEmployees = employees.filter(
+  const visibleEmployees = allEmployees.filter(
     (e) => roleFilter(e) && currentWeekIds.includes(e.id)
   );
 
-  function addToGrid(emp: typeof employees[0]) {
+  function addNewEmployee() {
+    const name = newEmployeeName.trim();
+    if (!name) return;
+    const newId = Math.max(...allEmployees.map((e) => e.id)) + 1;
+    const newEmp: Employee = { id: newId, name, role: view === 'kitchen' ? 'cook' : 'waiter' };
+    setAllEmployees((prev) => [...prev, newEmp]);
+    setNewEmployeeName('');
+    setAddingEmployee(false);
+  }
+
+  function addToGrid(emp: Employee) {
     setWeeklyGridIds((prev) => ({
       ...prev,
       [weekKey]: prev[weekKey] ? [...prev[weekKey], emp.id] : [emp.id],
@@ -435,9 +450,17 @@ export default function ScheduleGrid() {
 
       {/* Staff pool */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">
-          Available Staff — drag to schedule
-        </p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+            Available Staff — drag to schedule
+          </p>
+          <button
+            onClick={() => { setAddingEmployee(true); setNewEmployeeName(''); }}
+            className="text-xs px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 font-medium"
+          >
+            + Add {view === 'kitchen' ? 'Cook' : 'Waiter'}
+          </button>
+        </div>
         <div className="flex flex-wrap gap-2">
           {poolEmployees.map((emp) => (
             <div
@@ -716,7 +739,21 @@ export default function ScheduleGrid() {
               )}
             </div>
 
-            <div className="flex gap-2 pt-1">
+            {shifts.some(s => s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex) && (
+              <button
+                onClick={() => {
+                  setShifts((prev) => prev.filter(
+                    (s) => !(s.employee_id === editing.employee_id && s.dayIndex === editing.dayIndex)
+                  ));
+                  setEditing(null);
+                }}
+                className="w-full px-4 py-2 text-sm rounded-lg border border-red-200 dark:border-red-900 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                Remove shift
+              </button>
+            )}
+
+            <div className="flex gap-2">
               <button
                 onClick={() => setEditing(null)}
                 className="flex-1 px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -728,6 +765,54 @@ export default function ScheduleGrid() {
                 className="flex-1 px-4 py-2 text-sm rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:opacity-90 transition-opacity font-medium"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add employee modal */}
+      {addingEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setAddingEmployee(false)}>
+          <div
+            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-6 w-80 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-gray-100">
+                Add {view === 'kitchen' ? 'Cook' : 'Waiter'}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                They will appear in the staff pool.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 dark:text-gray-400">Name</label>
+              <input
+                type="text"
+                autoFocus
+                placeholder="Full name"
+                value={newEmployeeName}
+                onChange={(e) => setNewEmployeeName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') addNewEmployee(); if (e.key === 'Escape') setAddingEmployee(false); }}
+                className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAddingEmployee(false)}
+                className="flex-1 px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addNewEmployee}
+                disabled={!newEmployeeName.trim()}
+                className="flex-1 px-4 py-2 text-sm rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:opacity-90 transition-opacity font-medium disabled:opacity-40"
+              >
+                Add
               </button>
             </div>
           </div>
