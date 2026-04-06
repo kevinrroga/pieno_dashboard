@@ -41,21 +41,20 @@ export default function Nav() {
       ))}
       <div className="mt-auto px-2 flex flex-col gap-1">
         <button
-          onClick={toggle}
+          onClick={() => { setOpen(false); toggle(); }}
           className="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
           <span>{dark ? 'Light mode' : 'Dark mode'}</span>
           <span>{dark ? '☀️' : '🌙'}</span>
         </button>
         <button
-          onClick={handleLogout}
+          onClick={() => { setOpen(false); handleLogout(); }}
           className="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
           <span>Sign out</span>
-          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+            <line x1="12" y1="2" x2="12" y2="12" />
           </svg>
         </button>
       </div>

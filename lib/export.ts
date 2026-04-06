@@ -76,7 +76,7 @@ export function exportToExcel(
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Schedule');
-  XLSX.writeFile(wb, `schedule-${weekLabel}.xlsx`);
+  XLSX.writeFile(wb, `Pieno_${weekLabel}.xlsx`);
 }
 
 export async function exportToPdf(
@@ -125,7 +125,7 @@ export async function exportToPdf(
     pageOrientation: 'landscape' as const,
     pageMargins: [20, 30, 20, 30] as [number, number, number, number],
     content: [
-      { text: `Weekly Schedule — ${weekLabel}`, style: 'title', margin: [0, 0, 0, 12] },
+      { text: `Pieno — Weekly Schedule  ${weekLabel}`, style: 'title', margin: [0, 0, 0, 12] },
       {
         table: {
           headerRows: 1,
@@ -142,5 +142,5 @@ export async function exportToPdf(
     defaultStyle: { fontSize: 9 },
   };
 
-  pdfMake.createPdf(docDefinition).download(`schedule-${weekLabel}.pdf`);
+  pdfMake.createPdf(docDefinition).download(`Pieno_${weekLabel}.pdf`);
 }

@@ -167,6 +167,10 @@ export default function ScheduleGrid() {
   const [addingEmployee, setAddingEmployee] = useState(false);
   const [newEmployeeName, setNewEmployeeName] = useState('');
   const [staffColumnDragOver, setStaffColumnDragOver] = useState(false);
+  const [leaderboardMonth, setLeaderboardMonth] = useState(() => {
+    const n = new Date();
+    return { year: n.getFullYear(), month: n.getMonth() };
+  });
 
   // Touch drag state
   const touchDragEmployee = useRef<Employee | null>(null);
@@ -582,7 +586,8 @@ export default function ScheduleGrid() {
 
           <button
             onClick={() => {
-              const label = `${weekDays[0].getDate()}-${weekDays[0].getMonth() + 1}_${weekDays[6].getDate()}-${weekDays[6].getMonth() + 1}-${weekDays[6].getFullYear()}`;
+              const shortMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+              const label = `${weekDays[0].getDate()}${shortMonths[weekDays[0].getMonth()]}-${weekDays[6].getDate()}${shortMonths[weekDays[6].getMonth()]}-${weekDays[6].getFullYear()}`;
               exportToExcel(visibleEmployees, shifts, weekDays, label);
             }}
             className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
@@ -591,7 +596,8 @@ export default function ScheduleGrid() {
           </button>
           <button
             onClick={() => {
-              const label = `${weekDays[0].getDate()}-${weekDays[0].getMonth() + 1}_${weekDays[6].getDate()}-${weekDays[6].getMonth() + 1}-${weekDays[6].getFullYear()}`;
+              const shortMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+              const label = `${weekDays[0].getDate()}${shortMonths[weekDays[0].getMonth()]}-${weekDays[6].getDate()}${shortMonths[weekDays[6].getMonth()]}-${weekDays[6].getFullYear()}`;
               exportToPdf(visibleEmployees, shifts, weekDays, label);
             }}
             className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
@@ -629,8 +635,8 @@ export default function ScheduleGrid() {
                 draggedEmployee?.id === emp.id ? 'opacity-40' : 'opacity-100'
               } ${
                 emp.role === 'cook'
-                  ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                  : 'border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300'
+                  ? 'border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-800/50 text-blue-900 dark:text-blue-200'
+                  : 'border-cyan-300 dark:border-cyan-700 bg-cyan-100 dark:bg-cyan-800/50 text-cyan-900 dark:text-cyan-200'
               }`}
             >
               <span className="text-xs">{emp.role === 'cook' ? '👨‍🍳' : '🍽️'}</span>
@@ -698,8 +704,8 @@ export default function ScheduleGrid() {
           </thead>
           <tbody>
             {visibleEmployees.map((emp, rowIndex) => (
-              <tr key={emp.id} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/50 dark:bg-gray-800/50'}>
-                <td className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+              <tr key={emp.id} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
+                <td className="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center justify-between group">
                     <button
                       onClick={() => setViewingEmployee(emp)}
@@ -724,8 +730,8 @@ export default function ScheduleGrid() {
                   return (
                     <td
                       key={i}
-                      className={`px-3 py-3 text-center border-b border-gray-100 dark:border-gray-800 ${
-                        isToday ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
+                      className={`px-3 py-3 text-center border-b border-gray-200 dark:border-gray-700 ${
+                        isToday ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''
                       }`}
                     >
                       {shift ? (
@@ -733,8 +739,8 @@ export default function ScheduleGrid() {
                           onClick={() => openEditor(emp, i, shift)}
                           className={`inline-flex flex-col items-center rounded-lg px-3 py-1.5 gap-1 transition-opacity hover:opacity-75 ${
                             emp.role === 'cook'
-                              ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                              : 'bg-cyan-50 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300'
+                              ? 'bg-blue-100 dark:bg-blue-800/50 text-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-700'
+                              : 'bg-cyan-100 dark:bg-cyan-800/50 text-cyan-900 dark:text-cyan-200 border border-cyan-200 dark:border-cyan-700'
                           }`}
                         >
                           <span className="font-medium text-xs">{shift.start}–{shift.end}</span>
@@ -757,7 +763,7 @@ export default function ScheduleGrid() {
                     </td>
                   );
                 })}
-                <td className="px-3 py-3 text-center border-b border-gray-100 dark:border-gray-800">
+                <td className="px-3 py-3 text-center border-b border-gray-200 dark:border-gray-700">
                   {(() => {
                     const totalMins = shifts
                       .filter((s) => s.weekKey === weekKey && s.employee_id === emp.id)
@@ -769,7 +775,7 @@ export default function ScheduleGrid() {
                         return acc + gross - brk;
                       }, 0);
                     return totalMins > 0 ? (
-                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                         {formatHours(totalMins)}
                       </span>
                     ) : (
@@ -1006,11 +1012,11 @@ export default function ScheduleGrid() {
       {/* Legend */}
       <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800" />
+          <span className="inline-block w-3 h-3 rounded bg-blue-100 dark:bg-blue-800/50 border border-blue-300 dark:border-blue-700" />
           Cook
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded bg-cyan-100 dark:bg-cyan-900/40 border border-cyan-200 dark:border-cyan-800" />
+          <span className="inline-block w-3 h-3 rounded bg-cyan-100 dark:bg-cyan-800/50 border border-cyan-300 dark:border-cyan-700" />
           Waiter
         </span>
         <span className="flex items-center gap-1.5">
@@ -1018,6 +1024,110 @@ export default function ScheduleGrid() {
           Today
         </span>
       </div>
+
+      {/* Monthly Leaderboard */}
+      {(() => {
+        const { year, month } = leaderboardMonth;
+        const medals = ['🥇', '🥈', '🥉'];
+
+        const monthShifts = shifts.filter((s) => {
+          const d = new Date(s.weekKey);
+          d.setDate(d.getDate() + s.dayIndex);
+          return d.getFullYear() === year && d.getMonth() === month;
+        });
+
+        const totals: Record<number, number> = {};
+        for (const s of monthShifts) {
+          const gross = timeToMinutes(s.end) - timeToMinutes(s.start);
+          const breakMins = (s.breakStart && s.breakEnd)
+            ? timeToMinutes(s.breakEnd) - timeToMinutes(s.breakStart)
+            : 0;
+          totals[s.employee_id] = (totals[s.employee_id] ?? 0) + gross - breakMins;
+        }
+
+        function RankList({ role, barColor }: { role: 'waiter' | 'cook'; barColor: string }) {
+          const ranked = allEmployees
+            .filter((e) => e.role === role && (totals[e.id] ?? 0) > 0)
+            .map((e) => ({ ...e, minutes: totals[e.id] }))
+            .sort((a, b) => b.minutes - a.minutes);
+          const max = ranked[0]?.minutes ?? 1;
+
+          return ranked.length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No shifts recorded.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {ranked.map((emp, i) => (
+                <div key={emp.id} className="flex items-center gap-3">
+                  <span className="text-base w-6 text-center shrink-0">{medals[i] ?? <span className="text-xs text-gray-400">{i + 1}</span>}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{emp.name}</span>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-2 shrink-0">{formatHours(emp.minutes)}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          i === 0 ? 'bg-amber-400 dark:bg-amber-500' :
+                          i === 1 ? 'bg-gray-400 dark:bg-gray-400' :
+                          i === 2 ? 'bg-orange-400 dark:bg-orange-500' :
+                          barColor
+                        }`}
+                        style={{ width: `${(emp.minutes / max) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-3">
+            {/* Month picker header */}
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Monthly Leaderboard</h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setLeaderboardMonth(({ year: y, month: m }) => {
+                    const d = new Date(y, m - 1, 1);
+                    return { year: d.getFullYear(), month: d.getMonth() };
+                  })}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[110px] text-center">
+                  {MONTHS[month]} {year}
+                </span>
+                <button
+                  onClick={() => setLeaderboardMonth(({ year: y, month: m }) => {
+                    const d = new Date(y, m + 1, 1);
+                    return { year: d.getFullYear(), month: d.getMonth() };
+                  })}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Single panel matching current view */}
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {view === 'kitchen' ? 'Cooks' : 'Waiters'}
+                </h3>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Net hours worked</p>
+              </div>
+              <RankList
+                role={view === 'kitchen' ? 'cook' : 'waiter'}
+                barColor={view === 'kitchen' ? 'bg-blue-400 dark:bg-blue-500' : 'bg-cyan-400 dark:bg-cyan-500'}
+              />
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
