@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 function LoginCharacter({ coverEyes, hasError }: { coverEyes: boolean; hasError: boolean }) {
   const [pupil, setPupil] = useState({ x: 0, y: 0 });
@@ -103,7 +102,6 @@ function LoginCharacter({ coverEyes, hasError }: { coverEyes: boolean; hasError:
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -124,8 +122,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (res.ok) {
-      router.push('/');
-      router.refresh();
+      window.location.href = '/';
     } else {
       setError('Incorrect username or password.');
     }

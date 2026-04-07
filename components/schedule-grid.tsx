@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { exportToExcel, exportToPdf } from '@/lib/export';
+import { useRole } from '@/components/role-provider';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
@@ -156,6 +157,8 @@ type EditingShift = {
 type Employee = { id: number; name: string; role: string };
 
 export default function ScheduleGrid() {
+  const { role, loading: roleLoading } = useRole();
+  const isAdmin = !roleLoading && role === 'admin';
   const today = new Date();
   const [allEmployees, setAllEmployees] = useState<Employee[]>(employees);
   const [shifts, setShifts] = useState<Shift[]>(weeklyShifts);
@@ -171,6 +174,7 @@ export default function ScheduleGrid() {
     const n = new Date();
     return { year: n.getFullYear(), month: n.getMonth() };
   });
+  const [copiedShift, setCopiedShift] = useState<{ start: string; end: string; breakStart?: string; breakEnd?: string } | null>(null);
 
   // Touch drag state
   const touchDragEmployee = useRef<Employee | null>(null);
@@ -574,36 +578,54 @@ export default function ScheduleGrid() {
 
           <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
 
-          <button
-            onClick={duplicateLastWeek}
-            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
-            title="Copy last week's shifts into this week"
-          >
-            Copy last week
-          </button>
+          {isAdmin && (
+            <>
+              <button
+                onClick={duplicateLastWeek}
+                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+                title="Copy last week's shifts into this week"
+              >
+                Copy last week
+              </button>
 
-          <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+              <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
 
-          <button
-            onClick={() => {
-              const shortMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-              const label = `${weekDays[0].getDate()}${shortMonths[weekDays[0].getMonth()]}-${weekDays[6].getDate()}${shortMonths[weekDays[6].getMonth()]}-${weekDays[6].getFullYear()}`;
-              exportToExcel(visibleEmployees, shifts, weekDays, label);
-            }}
-            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
-          >
-            Export Excel
-          </button>
-          <button
-            onClick={() => {
-              const shortMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-              const label = `${weekDays[0].getDate()}${shortMonths[weekDays[0].getMonth()]}-${weekDays[6].getDate()}${shortMonths[weekDays[6].getMonth()]}-${weekDays[6].getFullYear()}`;
-              exportToPdf(visibleEmployees, shifts, weekDays, label);
-            }}
-            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
-          >
-            Export PDF
-          </button>
+              <button
+                onClick={() => {
+                  const shortMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                  const label = `${weekDays[0].getDate()}${shortMonths[weekDays[0].getMonth()]}-${weekDays[6].getDate()}${shortMonths[weekDays[6].getMonth()]}-${weekDays[6].getFullYear()}`;
+                  exportToExcel(visibleEmployees, shifts, weekDays, label);
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+              >
+                Export Excel
+              </button>
+              <button
+                onClick={() => {
+                  const shortMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                  const label = `${weekDays[0].getDate()}${shortMonths[weekDays[0].getMonth()]}-${weekDays[6].getDate()}${shortMonths[weekDays[6].getMonth()]}-${weekDays[6].getFullYear()}`;
+                  exportToPdf(visibleEmployees, shifts, weekDays, label);
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+              >
+                Export PDF
+              </button>
+            </>
+          )}
+
+          {/* Copied shift indicator */}
+          {copiedShift && (
+            <>
+              <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+              <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>
+                </svg>
+                <span>Copied {copiedShift.start}–{copiedShift.end}</span>
+                <button onClick={() => setCopiedShift(null)} className="hover:text-green-800 dark:hover:text-green-200 font-bold leading-none">×</button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -614,26 +636,28 @@ export default function ScheduleGrid() {
             <span className="hidden md:inline">Available Staff — drag to schedule</span>
             <span className="md:hidden">Available Staff — drag onto Staff column</span>
           </p>
-          <button
-            onClick={() => { setAddingEmployee(true); setNewEmployeeName(''); }}
-            className="text-xs px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 font-medium"
-          >
-            + Add {view === 'kitchen' ? 'Cook' : 'Waiter'}
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => { setAddingEmployee(true); setNewEmployeeName(''); }}
+              className="text-xs px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 font-medium"
+            >
+              + Add {view === 'kitchen' ? 'Cook' : 'Waiter'}
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {poolEmployees.map((emp) => (
             <div
               key={emp.id}
-              draggable
-              onDragStart={() => setDraggedEmployee(emp)}
+              draggable={isAdmin}
+              onDragStart={() => isAdmin && setDraggedEmployee(emp)}
               onDragEnd={() => { setDraggedEmployee(null); setStaffColumnDragOver(false); }}
-              onTouchStart={(e) => handleTouchStart(emp, e)}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-grab active:cursor-grabbing select-none transition-opacity touch-none ${
-                draggedEmployee?.id === emp.id ? 'opacity-40' : 'opacity-100'
-              } ${
+              onTouchStart={(e) => isAdmin && handleTouchStart(emp, e)}
+              onTouchMove={isAdmin ? handleTouchMove : undefined}
+              onTouchEnd={isAdmin ? handleTouchEnd : undefined}
+              className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium select-none transition-opacity touch-none ${
+                isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+              } ${draggedEmployee?.id === emp.id ? 'opacity-40' : 'opacity-100'} ${
                 emp.role === 'cook'
                   ? 'border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-800/50 text-blue-900 dark:text-blue-200'
                   : 'border-cyan-300 dark:border-cyan-700 bg-cyan-100 dark:bg-cyan-800/50 text-cyan-900 dark:text-cyan-200'
@@ -641,16 +665,18 @@ export default function ScheduleGrid() {
             >
               <span className="text-xs">{emp.role === 'cook' ? '👨‍🍳' : '🍽️'}</span>
               {emp.name}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm(`Remove ${emp.name} permanently?`)) removeEmployeePermanently(emp.id);
-                }}
-                className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-current hover:text-red-500 leading-none"
-                title="Remove permanently"
-              >
-                ×
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Remove ${emp.name} permanently?`)) removeEmployeePermanently(emp.id);
+                  }}
+                  className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-current hover:text-red-500 leading-none"
+                  title="Remove permanently"
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -714,13 +740,15 @@ export default function ScheduleGrid() {
                       <p className="font-medium text-gray-900 dark:text-gray-100">{emp.name}</p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 capitalize mt-0.5">{emp.role}</p>
                     </button>
-                    <button
-                      onClick={() => removeFromGrid(emp.id)}
-                      title="Remove from schedule"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 dark:text-gray-600 hover:text-red-400 dark:hover:text-red-500 text-lg leading-none pl-2"
-                    >
-                      ×
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => removeFromGrid(emp.id)}
+                        title="Remove from schedule"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 dark:text-gray-600 hover:text-red-400 dark:hover:text-red-500 text-lg leading-none pl-2"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 </td>
                 {weekDays.map((d, i) => {
@@ -735,31 +763,67 @@ export default function ScheduleGrid() {
                       }`}
                     >
                       {shift ? (
-                        <button
-                          onClick={() => openEditor(emp, i, shift)}
-                          className={`inline-flex flex-col items-center rounded-lg px-3 py-1.5 gap-1 transition-opacity hover:opacity-75 ${
-                            emp.role === 'cook'
-                              ? 'bg-blue-100 dark:bg-blue-800/50 text-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-700'
-                              : 'bg-cyan-100 dark:bg-cyan-800/50 text-cyan-900 dark:text-cyan-200 border border-cyan-200 dark:border-cyan-700'
-                          }`}
-                        >
-                          <span className="font-medium text-xs">{shift.start}–{shift.end}</span>
-                          {shift.breakStart && shift.breakEnd && (
-                            <span className="text-xs opacity-60 flex items-center gap-1">
-                              <span>⏸</span>
-                              <span>{shift.breakStart}–{shift.breakEnd}</span>
-                            </span>
+                        <div className="relative group/chip inline-flex">
+                          <button
+                            onClick={() => isAdmin && openEditor(emp, i, shift)}
+                            className={`inline-flex flex-col items-center rounded-lg px-3 py-1.5 gap-1 ${isAdmin ? 'hover:opacity-75 transition-opacity cursor-pointer' : 'cursor-default'} ${
+                              emp.role === 'cook'
+                                ? 'bg-blue-100 dark:bg-blue-800/50 text-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-700'
+                                : 'bg-cyan-100 dark:bg-cyan-800/50 text-cyan-900 dark:text-cyan-200 border border-cyan-200 dark:border-cyan-700'
+                            }`}
+                          >
+                            <span className="font-medium text-xs">{shift.start}–{shift.end}</span>
+                            {shift.breakStart && shift.breakEnd && (
+                              <span className="text-xs opacity-60 flex items-center gap-1">
+                                <span>⏸</span>
+                                <span>{shift.breakStart}–{shift.breakEnd}</span>
+                              </span>
+                            )}
+                          </button>
+                          {/* Copy button — admin only */}
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCopiedShift({ start: shift.start, end: shift.end, breakStart: shift.breakStart, breakEnd: shift.breakEnd });
+                              }}
+                              title="Copy shift"
+                              className="absolute -top-2 -right-2 opacity-0 group-hover/chip:opacity-100 transition-opacity bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full w-5 h-5 flex items-center justify-center shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500 dark:text-gray-300">
+                                <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                              </svg>
+                            </button>
                           )}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => openAdder(emp, i)}
-                          className="text-gray-200 dark:text-gray-700 hover:text-gray-400 dark:hover:text-gray-500 transition-colors text-lg leading-none"
-                          title="Add shift"
-                        >
-                          +
-                        </button>
-                      )}
+                        </div>
+                      ) : isAdmin ? (
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            onClick={() => openAdder(emp, i)}
+                            className="text-gray-200 dark:text-gray-700 hover:text-gray-400 dark:hover:text-gray-500 transition-colors text-lg leading-none"
+                            title="Add shift"
+                          >
+                            +
+                          </button>
+                          {copiedShift && (
+                            <button
+                              onClick={() => {
+                                setShifts((prev) => {
+                                  const filtered = prev.filter((s) => !(s.employee_id === emp.id && s.weekKey === weekKey && s.dayIndex === i));
+                                  return [...filtered, { employee_id: emp.id, weekKey, dayIndex: i, ...copiedShift }];
+                                });
+                                setCopiedShift(null);
+                              }}
+                              title="Paste shift"
+                              className="text-gray-300 dark:text-gray-600 hover:text-green-500 dark:hover:text-green-400 transition-colors"
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ) : null}
                     </td>
                   );
                 })}
@@ -865,14 +929,16 @@ export default function ScheduleGrid() {
                 >
                   Close
                 </button>
-                <button
-                  onClick={() => {
-                    if (confirm(`Remove ${viewingEmployee.name} permanently?`)) removeEmployeePermanently(viewingEmployee.id);
-                  }}
-                  className="flex-1 px-4 py-2 text-sm rounded-lg border border-red-200 dark:border-red-900 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                >
-                  Remove
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Remove ${viewingEmployee.name} permanently?`)) removeEmployeePermanently(viewingEmployee.id);
+                    }}
+                    className="flex-1 px-4 py-2 text-sm rounded-lg border border-red-200 dark:border-red-900 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
             </div>
           </div>

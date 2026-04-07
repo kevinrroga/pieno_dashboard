@@ -6,14 +6,19 @@ const secret = new TextEncoder().encode(process.env.AUTH_SECRET ?? 'fallback-sec
 export async function POST(request: Request) {
   const { username, password } = await request.json();
 
-  if (
-    username !== process.env.AUTH_USERNAME ||
-    password !== process.env.AUTH_PASSWORD
-  ) {
+  let role: 'admin' | 'viewer' | null = null;
+
+  if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
+    role = 'admin';
+  } else if (username === process.env.VIEWER_USERNAME && password === process.env.VIEWER_PASSWORD) {
+    role = 'viewer';
+  }
+
+  if (!role) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
-  const token = await new SignJWT({ username })
+  const token = await new SignJWT({ username, role })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('8h')
     .sign(secret);
@@ -23,7 +28,7 @@ export async function POST(request: Request) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 8, // 8 hours
+    maxAge: 60 * 60 * 8,
     path: '/',
   });
 
