@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useTheme } from './theme-provider';
+import HelpDrawer from './help-drawer';
 
 const links = [
   { href: '/',          label: 'Dashboard' },
@@ -16,6 +17,7 @@ export default function Nav() {
   const router = useRouter();
   const { dark, toggle } = useTheme();
   const [open, setOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -40,6 +42,14 @@ export default function Nav() {
         </Link>
       ))}
       <div className="mt-auto px-2 flex flex-col gap-1">
+        {/* Help button */}
+        <button
+          onClick={() => { setOpen(false); setHelpOpen(true); }}
+          className="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        >
+          <span>Help</span>
+          <span className="w-5 h-5 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center text-xs font-bold text-gray-400 dark:text-gray-500">?</span>
+        </button>
         <button
           onClick={() => { setOpen(false); toggle(); }}
           className="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -87,12 +97,10 @@ export default function Nav() {
       {/* Mobile overlay */}
       {open && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setOpen(false)}
           />
-          {/* Drawer */}
           <aside className="relative w-64 bg-white dark:bg-gray-900 flex flex-col py-6 px-4 gap-1 shadow-xl">
             <button
               onClick={() => setOpen(false)}
@@ -108,6 +116,9 @@ export default function Nav() {
           </aside>
         </div>
       )}
+
+      {/* Help drawer — always rendered, slides in/out */}
+      <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
     </>
   );
 }
